@@ -57,6 +57,22 @@
 #include <xhyve/vmm/io/vpmtmr.h>
 #include <xhyve/vmm/io/vrtc.h>
 
+#include <AvailabilityMacros.h>
+#ifndef MAC_OS_X_VERSION_10_12
+	#define MAC_OS_X_VERSION_10_12 101200
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+	#include <os/lock.h>
+        #define OSSpinLock os_unfair_lock
+        #define vcpu_lock(v) os_unfair_lock_lock(&(v)->lock)
+        #define vcpu_unlock(v) os_unfair_lock_unlock(&(v)->lock)
+	#define vcpu_lock_init(v) (v)->lock = OS_UNFAIR_LOCK_INIT;
+#else
+	#define vcpu_lock(v) OSSpinLockLock(&(v)->lock)
+	#define vcpu_unlock(v) OSSpinLockUnlock(&(v)->lock)
+	#define vcpu_lock_init(v) (v)->lock = OS_SPINLOCK_INIT;
+#endif
+
 struct vlapic;
 
 #pragma clang diagnostic push
@@ -89,10 +105,6 @@ struct vcpu {
 	struct vm_exit exitinfo; /* (x) exit reason and collateral */
 	uint64_t nextrip; /* (x) next instruction to execute */
 };
-
-#define vcpu_lock_init(v) (v)->lock = OS_SPINLOCK_INIT;
-#define vcpu_lock(v) OSSpinLockLock(&(v)->lock)
-#define vcpu_unlock(v) OSSpinLockUnlock(&(v)->lock)
 
 struct mem_seg {
 	uint64_t gpa;

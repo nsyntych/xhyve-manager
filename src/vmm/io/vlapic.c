@@ -56,9 +56,20 @@
  * - timer_freq_bt, timer_period_bt, timer_fire_bt
  * - timer LVT register
  */
-#define VLAPIC_TIMER_LOCK_INIT(v) (v)->timer_lock = OS_SPINLOCK_INIT;
-#define VLAPIC_TIMER_LOCK(v) OSSpinLockLock(&(v)->timer_lock)
-#define VLAPIC_TIMER_UNLOCK(v) OSSpinLockUnlock(&(v)->timer_lock)
+#include <AvailabilityMacros.h>
+#ifndef MAC_OS_X_VERSION_10_12
+        #define MAC_OS_X_VERSION_10_12 101200
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+        #include <os/lock.h>
+        #define VLAPIC_TIMER_LOCK(v) os_unfair_lock_lock(&(v)->timer_lock)
+        #define VLAPIC_TIMER_UNLOCK(v) os_unfair_lock_unlock(&(v)->timer_lock)
+        #define VLAPIC_TIMER_LOCK_INIT(v) (v)->timer_lock = OS_UNFAIR_LOCK_INIT;
+#else
+	#define VLAPIC_TIMER_LOCK_INIT(v) (v)->timer_lock = OS_SPINLOCK_INIT;
+	#define VLAPIC_TIMER_LOCK(v) OSSpinLockLock(&(v)->timer_lock)
+	#define VLAPIC_TIMER_UNLOCK(v) OSSpinLockUnlock(&(v)->timer_lock)
+#endif
 
 /*
  * APIC timer frequency:

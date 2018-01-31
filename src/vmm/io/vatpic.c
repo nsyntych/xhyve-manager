@@ -38,9 +38,22 @@
 #include <xhyve/vmm/io/vatpic.h>
 #include <xhyve/vmm/io/vioapic.h>
 
-#define VATPIC_LOCK_INIT(v) (v)->lock = OS_SPINLOCK_INIT;
-#define VATPIC_LOCK(v) OSSpinLockLock(&(v)->lock)
-#define VATPIC_UNLOCK(v) OSSpinLockUnlock(&(v)->lock)
+#include <AvailabilityMacros.h>
+#ifndef MAC_OS_X_VERSION_10_12
+        #define MAC_OS_X_VERSION_10_12 101200
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+        #include <os/lock.h>
+        #define OSSpinLock os_unfair_lock
+	#define VATPIC_LOCK_INIT(v) (v)->lock = OS_UNFAIR_LOCK_INIT;
+	#define VATPIC_LOCK(v) os_unfair_lock_lock(&(v)->lock)
+	#define VATPIC_UNLOCK(v) os_unfair_lock_unlock(&(v)->lock)
+
+#else
+	#define VATPIC_LOCK_INIT(v) (v)->lock = OS_SPINLOCK_INIT;
+	#define VATPIC_LOCK(v) OSSpinLockLock(&(v)->lock)
+	#define VATPIC_UNLOCK(v) OSSpinLockUnlock(&(v)->lock)
+#endif
 
 enum irqstate {
 	IRQSTATE_ASSERT,

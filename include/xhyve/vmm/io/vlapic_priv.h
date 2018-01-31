@@ -34,6 +34,15 @@
 #include <xhyve/support/apicreg.h>
 #include <xhyve/vmm/vmm_callout.h>
 
+#include <AvailabilityMacros.h>
+#ifndef MAC_OS_X_VERSION_10_12
+        #define MAC_OS_X_VERSION_10_12 101200
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+        #include <os/lock.h>
+        #define OSSpinLock os_unfair_lock
+#endif
+
 /*
  * APIC Register:		Offset	   Description
  */

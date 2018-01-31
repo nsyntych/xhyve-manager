@@ -39,6 +39,22 @@
 #include <xhyve/vmm/io/vioapic.h>
 #include <xhyve/vmm/io/vlapic.h>
 
+#include <AvailabilityMacros.h>
+#ifndef MAC_OS_X_VERSION_10_12
+        #define MAC_OS_X_VERSION_10_12 101200
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+        #include <os/lock.h>
+        #define OSSpinLock os_unfair_lock
+        #define VIOAPIC_LOCK(v) os_unfair_lock_lock(&(v)->lock)
+        #define VIOAPIC_UNLOCK(v) os_unfair_lock_unlock(&(v)->lock)
+        #define VIOAPIC_LOCK_INIT(v) (v)->lock = OS_UNFAIR_LOCK_INIT;
+#else
+        #define VIOAPIC_LOCK_INIT(v) (v)->lock = OS_SPINLOCK_INIT;
+        #define VIOAPIC_LOCK(v) OSSpinLockLock(&(v)->lock)
+        #define VIOAPIC_UNLOCK(v) OSSpinLockUnlock(&(v)->lock)
+#endif
+
 #define	IOREGSEL	0x00
 #define	IOWIN		0x10
 
@@ -58,10 +74,6 @@ struct vioapic {
 	} rtbl[REDIR_ENTRIES];
 };
 #pragma clang diagnostic pop
-
-#define VIOAPIC_LOCK_INIT(v) (v)->lock = OS_SPINLOCK_INIT;
-#define VIOAPIC_LOCK(v) OSSpinLockLock(&(v)->lock)
-#define VIOAPIC_UNLOCK(v) OSSpinLockUnlock(&(v)->lock)
 
 #define	VIOAPIC_CTR1(vioapic, fmt, a1) \
 	VM_CTR1((vioapic)->vm, fmt, a1)
